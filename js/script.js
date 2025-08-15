@@ -158,7 +158,16 @@ document.addEventListener('DOMContentLoaded', () => {
             if (row.MHWN && row.MHWN.includes("完全")) summary[type].MHWNok++;
         });
 
-        const labels = Object.keys(summary);
+        // 🌟 --- 以下是主要修改的部分 --- 🌟
+
+        // 1. 定義您想要的圖表X軸順序
+        const desiredOrder = ["曲線形", "單滬房", "雙滬房", "三滬房"];
+
+        // 2. 依照 desiredOrder 排序 labels，並只保留當前篩選資料中存在的類型
+        const labels = desiredOrder.filter(type => summary.hasOwnProperty(type));
+
+        // 🌟 --- 修改結束 --- 🌟
+        
         const mlwnData = labels.map(t => (summary[t].MLWNok / summary[t].total * 100) || 0);
         const mhwnData = labels.map(t => (summary[t].MHWNok / summary[t].total * 100) || 0);
 
@@ -196,7 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     } 
                 },
                 plugins: {
-                    title: { display: true, text: '各類型石滬狀態統計' },
+                    title: { display: true, text: '各類型石滬狀況統計' },
                     legend: { labels: { color: 'gray' } },
                     
                     // 🌟 --- 以下是新增的程式碼 --- 🌟
