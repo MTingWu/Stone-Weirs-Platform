@@ -27,6 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 地圖初始化 ---
     const map = L.map('map').setView(MAP_CONFIG.center, MAP_CONFIG.zoom);
+    map.zoomControl.setPosition('topright');
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors'
     }).addTo(map);
@@ -193,6 +194,17 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             options: {
                 responsive: true,
+                onClick: (event, elements) => {
+                // `elements` 是一個陣列，儲存了使用者點擊到的圖表元件
+                // 如果 `elements` 的長度是 0，代表使用者點擊的是圖表的空白處
+                if (elements.length === 0) {
+                    // 如果點擊空白處，就手動清除目前顯示的 tooltip (資訊框)
+                    if (myChart.tooltip && myChart.tooltip.getActiveElements().length > 0) {
+                        myChart.tooltip.setActiveElements([], { x: 0, y: 0 });
+                        myChart.update();
+                    }
+                }
+            },
                 scales: { 
                     y: { 
                         beginAtZero: true, 
