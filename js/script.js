@@ -4,9 +4,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 變數初始化 ---
     const MAP_CONFIG = {
         center: [23.746680, 119.609263],
-        zoom: 15,
+        // zoom: 15,
         csvPath: 'data/stone_weirs.csv' // CSV 的新路徑
     };
+
+    const desktopZoom = 15; // 電腦版的縮放等級
+    const mobileZoom = 14;  // 手機版的縮放等級 (數字越小，看得越遠)
+    const breakpointWidth = 768; // 區分手機/電腦的寬度分界點
+
+    const initialZoom = window.innerWidth < breakpointWidth ? mobileZoom : desktopZoom;
 
     const TYPE_COLORS = {
         "曲線形": "#00ff22ff",
@@ -26,8 +32,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const chartCanvas = document.getElementById("chart");
 
     // --- 地圖初始化 ---
-    const map = L.map('map').setView(MAP_CONFIG.center, MAP_CONFIG.zoom);
-    map.zoomControl.setPosition('topright');
+    // const map = L.map('map').setView(MAP_CONFIG.center, MAP_CONFIG.zoom);
+    // const map = L.map('map', { zoomControl: false }).setView(MAP_CONFIG.center, initialZoom);
+    // map.zoomControl.setPosition('topright');
+    // L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    //     attribution: '© OpenStreetMap contributors'
+    // }).addTo(map);
+
+    const map = L.map('map', {
+    zoomControl: false // 1. 先告訴地圖不要建立「預設」的縮放按鈕
+    }).setView(MAP_CONFIG.center, initialZoom);
+
+    // 2. 然後，我們「手動」建立一個新的縮放按鈕，並直接指定它的位置
+    L.control.zoom({
+        position: 'topright'
+    }).addTo(map);
+
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors'
     }).addTo(map);
@@ -97,13 +117,24 @@ document.addEventListener('DOMContentLoaded', () => {
             const lng = parseFloat(row.Longtitude);
             
             if (!isNaN(lat) && !isNaN(lng)) {
-                const marker = L.circleMarker([lat, lng], {
-                    radius: 4,
+                // const marker = L.circleMarker([lat, lng], {
+                //     radius: 4,
+                //     color: TYPE_COLORS[row.Type] || "gray",
+                //     fillColor: TYPE_COLORS[row.Type] || "gray",
+                //     fillOpacity: 0.8,
+                //     weight: 2
+                // });
+
+                // ... in updateMap function
+                // 🌟 1. 將 L.circleMarker 更換為 L.circle
+                const marker = L.circle([lat, lng], {
+                    radius: 20, // 🌟 2. 單位已變為「公尺」，需要一個較大的值
                     color: TYPE_COLORS[row.Type] || "gray",
                     fillColor: TYPE_COLORS[row.Type] || "gray",
                     fillOpacity: 0.8,
                     weight: 2
                 });
+// ...
 
                 const popupHTML = `
                     <h4>石滬編號：${row.ID}</h4>

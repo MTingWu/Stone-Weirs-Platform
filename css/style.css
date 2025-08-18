@@ -12,11 +12,12 @@ body {
     width: 300px; 
     overflow-y: auto; 
     padding: 1.5rem; 
-    background: linear-gradient(180deg, #4a90e2 0%, #2c5aa0 50%, #1e3c72 100%);
+    /* 🌟 將漸層背景換成您指定的單色 */
+    background: linear-gradient(180deg, #65a5ee 0%, #558cdf 50%, #417ae4 100%);
     color: white;
     box-shadow: 2px 0 10px rgba(0,0,0,0.3);
-    transition: transform 0.3s ease-in-out; /* 為了收合動畫 */
-    z-index: 1000; /* 確保在最上層 */
+    transition: transform 0.3s ease-in-out;
+    z-index: 1000;
 }
 
 .title-bar {
