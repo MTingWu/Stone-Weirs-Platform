@@ -1,24 +1,50 @@
 // 等待 HTML 文件完全載入後再執行
 document.addEventListener('DOMContentLoaded', () => {
 
-    // --- 變數初始化 ---
+    // --- 設定 ---
     const MAP_CONFIG = {
         center: [23.746680, 119.609263],
-        // zoom: 15,
         apiPath: '/api/weirs' // 後端 API (資料來自 PostgreSQL/PostGIS)
     };
 
-    const desktopZoom = 15; // 電腦版的縮放等級
-    const mobileZoom = 14;  // 手機版的縮放等級 (數字越小，看得越遠)
-    const breakpointWidth = 768; // 區分手機/電腦的寬度分界點
-
+    const desktopZoom = 15;
+    const mobileZoom = 14;
+    const breakpointWidth = 768;
     const initialZoom = window.innerWidth < breakpointWidth ? mobileZoom : desktopZoom;
 
+    // 四種類型的標記顏色：色相差異大，在黑白影像上仍明顯，
+    // 但降低飽和度，與側邊欄的米白、深灰協調
     const TYPE_COLORS = {
-        "曲線形": "#00ff22ff",
-        "單滬房": "#fffb20ff",
-        "雙滬房": "#ff28f4ff",
-        "三滬房": "#02a2ffff"
+        "曲線形": "#5fc4b8", // 海玻璃青
+        "單滬房": "#f2c14e", // 潮線沙金
+        "雙滬房": "#e8744f", // 礁石珊瑚橘
+        "三滬房": "#a98bd9"  // 淡紫
+    };
+
+    const TYPE_ORDER = ["曲線形", "單滬房", "雙滬房", "三滬房"];
+
+    // 圖例用的石滬形狀示意 (曲線形為單一弧牆，其餘為 1～3 個滬房)
+    const INK = "#2e3438";
+    const TYPE_SHAPES = {
+        "曲線形": `<path d="M4 23 Q20 -5 36 23" fill="none" stroke="${INK}" stroke-width="1.8" stroke-linecap="round"/>
+                   <circle cx="20" cy="9" r="3.5" fill="COLOR" stroke="${INK}" stroke-width="1"/>`,
+        "單滬房": `<circle cx="20" cy="14" r="9" fill="none" stroke="${INK}" stroke-width="1.8"/>
+                   <circle cx="20" cy="14" r="3.5" fill="COLOR" stroke="${INK}" stroke-width="1"/>`,
+        "雙滬房": `<circle cx="14" cy="14" r="8" fill="none" stroke="${INK}" stroke-width="1.8"/>
+                   <circle cx="26" cy="14" r="8" fill="none" stroke="${INK}" stroke-width="1.8"/>
+                   <circle cx="20" cy="14" r="3.5" fill="COLOR" stroke="${INK}" stroke-width="1"/>`,
+        "三滬房": `<circle cx="13" cy="19" r="6" fill="none" stroke="${INK}" stroke-width="1.8"/>
+                   <circle cx="27" cy="19" r="6" fill="none" stroke="${INK}" stroke-width="1.8"/>
+                   <circle cx="20" cy="9" r="6" fill="none" stroke="${INK}" stroke-width="1.8"/>
+                   <circle cx="20" cy="16" r="3.5" fill="COLOR" stroke="${INK}" stroke-width="1"/>`
+    };
+
+    // 圖表顏色
+    const CHART_COLORS = {
+        low: "#5f8a8b",  // 海水青
+        high: "#b8582e", // 礁石鏽橘
+        text: "#2e3438",
+        grid: "#d8d1bf"
     };
 
     let allData = [];
@@ -32,21 +58,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const chartCanvas = document.getElementById("chart");
 
     // --- 地圖初始化 ---
-    // const map = L.map('map').setView(MAP_CONFIG.center, MAP_CONFIG.zoom);
-    // const map = L.map('map', { zoomControl: false }).setView(MAP_CONFIG.center, initialZoom);
-    // map.zoomControl.setPosition('topright');
-    // L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    //     attribution: '© OpenStreetMap contributors'
-    // }).addTo(map);
-
-    const map = L.map('map', {
-    zoomControl: false // 1. 先告訴地圖不要建立「預設」的縮放按鈕
-    }).setView(MAP_CONFIG.center, initialZoom);
-
-    // 2. 然後，我們「手動」建立一個新的縮放按鈕，並直接指定它的位置
-    L.control.zoom({
-        position: 'topright'
-    }).addTo(map);
+    const map = L.map('map', { zoomControl: false }).setView(MAP_CONFIG.center, initialZoom);
+    L.control.zoom({ position: 'topright' }).addTo(map);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors'
@@ -60,15 +73,13 @@ document.addEventListener('DOMContentLoaded', () => {
         "小潮低潮(MLWN)影像": tile_low,
         "小潮高潮(MHWN)影像": tile_high
     }).addTo(map);
-    
-    // 資料來源標示 (顯示在地圖右下角)
+
     map.attributionControl.addAttribution('石滬位置資料：參考自曾宥輯 (國立澎湖科技大學) 碩士論文');
 
     const markerGroup = L.layerGroup().addTo(map);
 
     // --- 主要功能函數 ---
 
-    // 顯示/隱藏讀取提示
     function showLoader(show) {
         loader.style.display = show ? 'flex' : 'none';
     }
@@ -85,7 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // 把 API 的欄位轉成下面各函式使用的格式 (維持原本畫地圖、圖表的程式不變)
+            // 把 API 欄位轉成下面各函式使用的格式
             allData = json.data.map(w => ({
                 ID: w.id,
                 Type: w.type,
@@ -113,62 +124,58 @@ document.addEventListener('DOMContentLoaded', () => {
         data.forEach(row => {
             const lat = parseFloat(row.Latitude);
             const lng = parseFloat(row.Longtitude);
-            
-            if (!isNaN(lat) && !isNaN(lng)) {
-                // const marker = L.circleMarker([lat, lng], {
-                //     radius: 4,
-                //     color: TYPE_COLORS[row.Type] || "gray",
-                //     fillColor: TYPE_COLORS[row.Type] || "gray",
-                //     fillOpacity: 0.8,
-                //     weight: 2
-                // });
+            if (isNaN(lat) || isNaN(lng)) return;
 
-                // ... in updateMap function
-                // 🌟 1. 將 L.circleMarker 更換為 L.circle
-                const marker = L.circle([lat, lng], {
-                    radius: 20, // 🌟 2. 單位已變為「公尺」，需要一個較大的值
-                    color: TYPE_COLORS[row.Type] || "gray",
-                    fillColor: TYPE_COLORS[row.Type] || "gray",
-                    fillOpacity: 0.8,
-                    weight: 2
-                });
-// ...
+            const color = TYPE_COLORS[row.Type] || "gray";
 
-                const popupHTML = `
-                    <h4>石滬編號：${row.ID}</h4>
-                    <p><strong>類型：</strong>${row.Type}</p>
-                    <p><strong>小潮低潮位 (MLWN)：</strong>${row.MLWN_check && row.MLWN_check.includes("1") ? "✅" : "❌"} </p>
-                    <p><strong>小潮高潮位 (MHWN)：</strong>${row.MHWN && row.MHWN.includes("完全") ? "✅" : "❌"} </p>
-                    `;
-                marker.bindPopup(popupHTML);
-                markerGroup.addLayer(marker);
-            }
+            // 半徑單位為公尺；白色外框讓標記在深色影像上更清楚
+            const marker = L.circle([lat, lng], {
+                radius: 20,
+                color: "#ffffff",
+                weight: 1.5,
+                fillColor: color,
+                fillOpacity: 0.9
+            });
+
+            const mlwnGood = row.MLWN_check && row.MLWN_check.includes("1");
+            const mhwnFull = row.MHWN && row.MHWN.includes("完全");
+
+            const popupHTML = `
+                <h4>石滬編號 ${row.ID}</h4>
+                <p class="popup-type"><span class="popup-dot" style="background:${color}"></span>${row.Type}</p>
+                <dl class="popup-list">
+                    <dt>小潮低潮位 (MLWN)</dt>
+                    <dd>${mlwnGood ? "狀況良好" : "未達良好"}</dd>
+                    <dt>小潮高潮位 (MHWN)</dt>
+                    <dd>${mhwnFull ? "完全淹沒" : "未完全淹沒"}</dd>
+                </dl>`;
+            marker.bindPopup(popupHTML);
+            markerGroup.addLayer(marker);
         });
     }
 
-    // 初始化篩選器
+    // 初始化篩選器 (圖例以石滬形狀示意)
     function initFilterControls(data) {
         filterContainer.innerHTML = '';
-        const desiredOrder = ["曲線形", "單滬房", "雙滬房", "三滬房"];
-        const allTypesInFile = new Set(data.map(d => d.Type));
-        const sortedTypes = desiredOrder.filter(type => allTypesInFile.has(type));
-        
+        const typesInData = new Set(data.map(d => d.Type));
+        const sortedTypes = TYPE_ORDER.filter(type => typesInData.has(type));
+
         sortedTypes.forEach(type => {
             const id = "filter_" + type.replace(/\s+/g, '_');
+            const color = TYPE_COLORS[type] || 'gray';
+            const svg = `<svg viewBox="0 0 40 28" aria-hidden="true">${TYPE_SHAPES[type].replace(/COLOR/g, color)}</svg>`;
             const html = `
                 <div class="type-checkbox">
                     <input type="checkbox" id="${id}" value="${type}" checked>
-                    <label for="${id}">
-                        <span style="color: ${TYPE_COLORS[type] || 'gray'};">●</span> ${type}
-                    </label>
+                    <label for="${id}">${svg}<span>${type}</span></label>
                 </div>`;
             filterContainer.insertAdjacentHTML('beforeend', html);
         });
-        
+        filterContainer.insertAdjacentHTML('beforeend', '<p class="legend-note">圖例為形狀示意，圓點顏色對應地圖標記。</p>');
+
         filterContainer.addEventListener('change', handleFilterChange);
     }
 
-    // 處理篩選變更
     function handleFilterChange() {
         const checkedTypes = Array.from(filterContainer.querySelectorAll('input:checked')).map(input => input.value);
         const filteredData = allData.filter(d => checkedTypes.includes(d.Type));
@@ -180,7 +187,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateChart(data) {
         const summary = {};
         data.forEach(row => {
-            // 確保欄位名稱與您的 CSV 檔一致 (這裡假設是 'Type', 'MLWN_check', 'MHWN')
             const type = row.Type;
             if (!summary[type]) summary[type] = { MLWNok: 0, MHWNok: 0, total: 0 };
             summary[type].total++;
@@ -188,114 +194,83 @@ document.addEventListener('DOMContentLoaded', () => {
             if (row.MHWN && row.MHWN.includes("完全")) summary[type].MHWNok++;
         });
 
-        // 🌟 --- 以下是主要修改的部分 --- 🌟
-
-        // 1. 定義您想要的圖表X軸順序
-        const desiredOrder = ["曲線形", "單滬房", "雙滬房", "三滬房"];
-
-        // 2. 依照 desiredOrder 排序 labels，並只保留當前篩選資料中存在的類型
-        const labels = desiredOrder.filter(type => summary.hasOwnProperty(type));
-
-        // 🌟 --- 修改結束 --- 🌟
-        
+        const labels = TYPE_ORDER.filter(type => summary.hasOwnProperty(type));
         const mlwnData = labels.map(t => (summary[t].MLWNok / summary[t].total * 100) || 0);
         const mhwnData = labels.map(t => (summary[t].MHWNok / summary[t].total * 100) || 0);
 
         if (myChart) myChart.destroy();
-        
+
+        Chart.defaults.font.family = "'Noto Sans TC', 'Microsoft JhengHei', sans-serif";
+        Chart.defaults.color = CHART_COLORS.text;
+
         myChart = new Chart(chartCanvas, {
             type: 'bar',
             data: {
                 labels: labels,
                 datasets: [{
-                    label: '低潮位狀況良好', // 標籤可以拿掉 %
+                    label: '低潮位狀況良好',
                     data: mlwnData,
-                    backgroundColor: '#87ceeb',
-                    borderColor: '#4a90e2',
-                    borderWidth: 2
+                    backgroundColor: CHART_COLORS.low,
+                    borderWidth: 0
                 }, {
-                    label: '高潮位狀況良好', // 標籤可以拿掉 %
+                    label: '高潮位狀況良好',
                     data: mhwnData,
-                    backgroundColor: '#ff7f7f',
-                    borderColor: '#ff6b6b',
-                    borderWidth: 2
+                    backgroundColor: CHART_COLORS.high,
+                    borderWidth: 0
                 }]
             },
             options: {
                 responsive: true,
-                scales: { 
-                    y: { 
-                        beginAtZero: true, 
+                scales: {
+                    x: { grid: { display: false } },
+                    y: {
+                        beginAtZero: true,
                         max: 100,
-                        ticks: {
-                            callback: function(value) {
-                                return value + '%'; // 在 Y 軸刻度加上 %
-                            }
-                        }
-                    } 
+                        grid: { color: CHART_COLORS.grid },
+                        ticks: { callback: value => value + '%' }
+                    }
                 },
                 plugins: {
-                    title: { display: true, text: '各類型石滬狀況統計' },
-                    legend: { labels: { color: 'gray' } },
-                    
-                    // 🌟 --- 以下是新增的程式碼 --- 🌟
+                    title: { display: true, text: '各類型石滬狀況統計', color: CHART_COLORS.text },
+                    legend: { labels: { color: CHART_COLORS.text, boxWidth: 12, boxHeight: 12 } },
                     tooltip: {
                         callbacks: {
-                            label: function(context) {
-                                // 獲取資料集的標籤，例如 '低潮位狀況良好'
-                                let label = context.dataset.label || '';
-
-                                // 獲取當前長條圖對應的石滬類型，例如 '曲線形'
+                            label: function (context) {
+                                const label = context.dataset.label || '';
                                 const type = context.label;
                                 const total = summary[type].total;
-                                let count = 0;
-
-                                // 判斷是低潮位還是高潮位的資料
-                                if (context.datasetIndex === 0) { // 第一個資料集 (低潮位)
-                                    count = summary[type].MLWNok;
-                                } else { // 第二個資料集 (高潮位)
-                                    count = summary[type].MHWNok;
-                                }
-
-                                // 獲取百分比值並格式化到小數點後一位
+                                const count = context.datasetIndex === 0 ? summary[type].MLWNok : summary[type].MHWNok;
                                 const percentage = context.parsed.y.toFixed(1);
-
-                                // 組合最終要顯示的文字
                                 return `${label}: ${percentage}% (${count} / ${total})`;
                             }
                         }
                     }
-                    // 🌟 --- 新增程式碼結束 --- 🌟
                 }
             }
         });
     }
-    
+
     // --- 事件監聽 ---
-    
-    // 手機版側邊欄開關
+
     sidebarToggle.addEventListener('click', () => {
         sidebar.classList.toggle('open');
     });
 
-    // 點擊地圖時，如果側邊欄是開的，就關閉它
     map.on('click', () => {
         if (sidebar.classList.contains('open')) {
             sidebar.classList.remove('open');
         }
     });
-    // 監聽整個頁面的點擊事件，用來關閉圖表資訊框
-    document.addEventListener('click', function(event) {
-        // 檢查點擊的目標是否是圖表畫布 (chartCanvas) 或其子元素
-        const isClickInsideChart = chartCanvas.contains(event.target);
 
-        // 如果點擊位置不在圖表內，且資訊框是開啟的，就將其關閉
+    // 點擊圖表以外的地方時，關閉圖表資訊框
+    document.addEventListener('click', function (event) {
+        const isClickInsideChart = chartCanvas.contains(event.target);
         if (!isClickInsideChart && myChart && myChart.tooltip && myChart.tooltip.getActiveElements().length > 0) {
             myChart.tooltip.setActiveElements([], { x: 0, y: 0 });
             myChart.update();
         }
     });
-    
+
     // --- 程式進入點 ---
     loadData();
 });

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-        <!-- Google tag (gtag.js) -->
+    <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-J2RXECXJ2T"></script>
     <script>
     window.dataLayer = window.dataLayer || [];
@@ -12,8 +12,13 @@
     </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
     <title>澎湖吉貝石滬互動地圖平台</title>
-  
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600&family=Noto+Serif+TC:wght@600&display=swap" rel="stylesheet">
+
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -22,20 +27,20 @@
 </head>
 <body>
     <div id="loader">
-        <img src="assets/loading.gif" alt="Loading..."> 
+        <img src="assets/loading.gif" alt="Loading...">
         <p>石滬資料載入中...</p>
     </div>
 
-    <button id="sidebar-toggle">☰</button>
+    <button id="sidebar-toggle" aria-label="開啟選單">☰</button>
 
     <div id="sidebar">
         <div class="title-bar">
-            <h1>吉貝嶼石滬<br>(Stone Weirs in Jibei)</h1>
+            <h1>吉貝嶼石滬</h1>
+            <p class="sub">Stone Weirs in Jibei</p>
         </div>
-        <h3>石滬類型篩選 (Type Filter)</h3>
-        <div id="filter-controls">
-            </div>
-        <h3>統計圖表 (Statistics Chart)</h3>
+        <h3>石滬類型篩選 <small>Type Filter</small></h3>
+        <div id="filter-controls"></div>
+        <h3>統計圖表 <small>Statistics Chart</small></h3>
         <canvas id="chart"></canvas>
         <p class="data-source">資料來源：石滬位置資料參考自曾宥輯（國立澎湖科技大學）碩士論文；低 / 高潮位影像判釋為作者研究成果。</p>
     </div>
