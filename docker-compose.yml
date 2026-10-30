@@ -1,0 +1,31 @@
+# 本機啟動網站 + PostGIS:  docker compose up --build
+# 第一次要匯入資料:        docker compose run --rm web python scripts/import_csv.py
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: weirs
+      POSTGRES_PASSWORD: weirs_pw
+      POSTGRES_DB: weirs
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U weirs -d weirs"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      DATABASE_URL: postgresql://weirs:weirs_pw@db:5432/weirs
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
