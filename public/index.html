@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+        <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-J2RXECXJ2T"></script>
+    <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-J2RXECXJ2T');
+    </script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>澎湖吉貝石滬互動地圖平台</title>
+  
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="loader">
+        <img src="assets/loading.gif" alt="Loading..."> 
+        <p>石滬資料載入中...</p>
+    </div>
+
+    <button id="sidebar-toggle">☰</button>
+
+    <div id="sidebar">
+        <div class="title-bar">
+            <h1>吉貝嶼石滬<br>(Stone Weirs in Jibei)</h1>
+        </div>
+        <h3>石滬類型篩選 (Type Filter)</h3>
+        <div id="filter-controls">
+            </div>
+        <h3>統計圖表 (Statistics Chart)</h3>
+        <canvas id="chart"></canvas>
+        <p class="data-source">資料來源：石滬位置資料參考自曾宥輯（國立澎湖科技大學）碩士論文；低 / 高潮位影像判釋為作者研究成果。</p>
+    </div>
+
+    <div id="map"></div>
+
+    <script src="js/script.js"></script>
+
+</body>
+</html>
