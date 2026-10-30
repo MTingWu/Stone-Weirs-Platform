@@ -1,0 +1,10 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+
+# 石滬原始資料不放進 repo (資料來源授權確認中)。檔案只留在本機，用 scripts/import_csv.py 匯入資料庫。
+data/*
+!data/.gitkeep
